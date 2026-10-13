@@ -1,0 +1,9 @@
+# Ignore environment variables
+.env
+
+# Ignore node modules (มักจะไม่เอาขึ้น GitHub เพราะใหญ่เกินไป โหลดใหม่ด้วย npm install ได้)
+node_modules/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
