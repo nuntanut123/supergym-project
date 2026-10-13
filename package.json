@@ -20,5 +20,13 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nuntanut123/supergym-project.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nuntanut123/supergym-project/issues"
+  },
+  "homepage": "https://github.com/nuntanut123/supergym-project#readme"
 }
