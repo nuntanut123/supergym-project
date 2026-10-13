@@ -1,4 +1,4 @@
-USE supergym;
+
 
 -- 1. add (Branch)
 INSERT INTO branch (branch_name, location, phone, opening_hours) VALUES

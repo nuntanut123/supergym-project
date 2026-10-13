@@ -1,4 +1,4 @@
-USE supergym;
+
 
 -- Expected 14 tables and three sessions. Read-only validation.
 SELECT 'tables' AS metric, COUNT(*) AS total FROM information_schema.tables WHERE table_schema='supergym'

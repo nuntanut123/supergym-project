@@ -1,6 +1,4 @@
 -- 1. CREATE Database
-CREATE DATABASE IF NOT EXISTS supergym;
-USE supergym;
 
 -- 2. (Independent Tables)
 CREATE TABLE branch (

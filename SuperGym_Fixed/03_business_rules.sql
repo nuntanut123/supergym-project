@@ -1,8 +1,11 @@
-USE supergym;
--- Run after 01_schema.sql and 02_sample_data.sql on a clean database.
--- MySQL 8.0.16+ required for CHECK enforcement.
+-- สคริปต์นี้ไม่มี TRIGGER (Clever Cloud ไม่ให้สร้าง trigger เพราะติด error 1419)
+-- มีเฉพาะ STORED PROCEDURE ซึ่งสร้างได้ปกติ
+-- ต้อง CALL procedure ก่อน INSERT/UPDATE/DELETE เอง (ดูตัวอย่างท้ายไฟล์)
+
 DELIMITER //
 
+-- ===== BR17 / BR18: ตรวจ session =====
+-- INSERT: p_session_id = NULL | UPDATE: ส่ง session_id เดิม
 DROP PROCEDURE IF EXISTS validate_session//
 CREATE PROCEDURE validate_session(IN p_session_id INT, IN p_class_id INT, IN p_trainer_id INT, IN p_start DATETIME)
 BEGIN
@@ -25,20 +28,17 @@ BEGIN
  END IF;
 END//
 
-DROP TRIGGER IF EXISTS session_bi//
-CREATE TRIGGER session_bi BEFORE INSERT ON class_session FOR EACH ROW
+-- ===== BR16: ตรวจ capacity ตอนแก้ session =====
+DROP PROCEDURE IF EXISTS validate_session_capacity//
+CREATE PROCEDURE validate_session_capacity(IN p_session_id INT, IN p_new_capacity INT)
 BEGIN
- CALL validate_session(NULL,NEW.class_id,NEW.trainer_id,NEW.session_date);
-END//
-DROP TRIGGER IF EXISTS session_bu//
-CREATE TRIGGER session_bu BEFORE UPDATE ON class_session FOR EACH ROW
-BEGIN
- CALL validate_session(OLD.session_id,NEW.class_id,NEW.trainer_id,NEW.session_date);
- IF NEW.capacity < (SELECT COUNT(*) FROM class_booking WHERE session_id=OLD.session_id AND status='Confirmed') THEN
+ IF p_new_capacity < (SELECT COUNT(*) FROM class_booking WHERE session_id=p_session_id AND status='Confirmed') THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR16: capacity below confirmed bookings';
  END IF;
 END//
 
+-- ===== BR16: ตรวจการจอง =====
+-- INSERT: p_exclude_id = NULL | UPDATE: ส่ง booking_id เดิม
 DROP PROCEDURE IF EXISTS validate_booking//
 CREATE PROCEDURE validate_booking(IN p_session_id INT, IN p_status VARCHAR(50), IN p_exclude_id INT)
 BEGIN
@@ -54,72 +54,42 @@ BEGIN
   END IF;
  END IF;
 END//
-DROP TRIGGER IF EXISTS booking_bi//
-CREATE TRIGGER booking_bi BEFORE INSERT ON class_booking FOR EACH ROW
-BEGIN
- CALL validate_booking(NEW.session_id,NEW.status,NULL);
-END//
-DROP TRIGGER IF EXISTS booking_bu//
-CREATE TRIGGER booking_bu BEFORE UPDATE ON class_booking FOR EACH ROW
-BEGIN
- CALL validate_booking(NEW.session_id,NEW.status,OLD.booking_id);
-END//
 
-DROP TRIGGER IF EXISTS fulltime_bi//
-CREATE TRIGGER fulltime_bi BEFORE INSERT ON full_time_trainer FOR EACH ROW
+-- ===== BR20: เทรนเนอร์เป็นได้อย่างเดียว (full หรือ part) =====
+-- p_type = 'full' (จะเพิ่มใน full_time_trainer) หรือ 'part' (part_time_trainer)
+DROP PROCEDURE IF EXISTS validate_trainer_type//
+CREATE PROCEDURE validate_trainer_type(IN p_trainer_id INT, IN p_type VARCHAR(10))
 BEGIN
- IF EXISTS(SELECT 1 FROM part_time_trainer WHERE trainer_id=NEW.trainer_id) THEN
+ IF p_type='full' AND EXISTS(SELECT 1 FROM part_time_trainer WHERE trainer_id=p_trainer_id) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR20: trainer already part-time';
  END IF;
-END//
-DROP TRIGGER IF EXISTS fulltime_bu//
-CREATE TRIGGER fulltime_bu BEFORE UPDATE ON full_time_trainer FOR EACH ROW
-BEGIN
- IF EXISTS(SELECT 1 FROM part_time_trainer WHERE trainer_id=NEW.trainer_id) THEN
-  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR20: trainer already part-time';
- END IF;
-END//
-DROP TRIGGER IF EXISTS parttime_bi//
-CREATE TRIGGER parttime_bi BEFORE INSERT ON part_time_trainer FOR EACH ROW
-BEGIN
- IF EXISTS(SELECT 1 FROM full_time_trainer WHERE trainer_id=NEW.trainer_id) THEN
-  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR20: trainer already full-time';
- END IF;
-END//
-DROP TRIGGER IF EXISTS parttime_bu//
-CREATE TRIGGER parttime_bu BEFORE UPDATE ON part_time_trainer FOR EACH ROW
-BEGIN
- IF EXISTS(SELECT 1 FROM full_time_trainer WHERE trainer_id=NEW.trainer_id) THEN
+ IF p_type='part' AND EXISTS(SELECT 1 FROM full_time_trainer WHERE trainer_id=p_trainer_id) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR20: trainer already full-time';
  END IF;
 END//
 
--- Protect BR18 when existing class requirements or trainer certifications change.
-DROP TRIGGER IF EXISTS fitness_class_bu//
-CREATE TRIGGER fitness_class_bu BEFORE UPDATE ON fitness_class FOR EACH ROW
+-- ===== BR18: เรียกก่อน UPDATE fitness_class ที่เปลี่ยน specialization =====
+DROP PROCEDURE IF EXISTS validate_class_specialization_change//
+CREATE PROCEDURE validate_class_specialization_change(IN p_class_id INT, IN p_new_spec INT)
 BEGIN
- IF NEW.specialization_id<>OLD.specialization_id AND EXISTS (
-  SELECT 1 FROM class_session cs WHERE cs.class_id=OLD.class_id
-  AND NOT EXISTS (SELECT 1 FROM trainer_specialization ts WHERE ts.trainer_id=cs.trainer_id AND ts.specialization_id=NEW.specialization_id)
+ IF EXISTS (
+  SELECT 1 FROM class_session cs WHERE cs.class_id=p_class_id
+  AND NOT EXISTS (SELECT 1 FROM trainer_specialization ts
+                  WHERE ts.trainer_id=cs.trainer_id AND ts.specialization_id=p_new_spec)
  ) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR18: change would invalidate assigned trainers';
  END IF;
 END//
-DROP TRIGGER IF EXISTS trainer_specialization_bd//
-CREATE TRIGGER trainer_specialization_bd BEFORE DELETE ON trainer_specialization FOR EACH ROW
+
+-- ===== BR18: เรียกก่อน DELETE/UPDATE trainer_specialization =====
+DROP PROCEDURE IF EXISTS validate_specialization_removal//
+CREATE PROCEDURE validate_specialization_removal(IN p_trainer_id INT, IN p_spec_id INT)
 BEGIN
  IF EXISTS (SELECT 1 FROM class_session cs JOIN fitness_class fc ON fc.class_id=cs.class_id
-  WHERE cs.trainer_id=OLD.trainer_id AND fc.specialization_id=OLD.specialization_id) THEN
+  WHERE cs.trainer_id=p_trainer_id AND fc.specialization_id=p_spec_id) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR18: certification required by assigned session';
  END IF;
 END//
-DROP TRIGGER IF EXISTS trainer_specialization_bu//
-CREATE TRIGGER trainer_specialization_bu BEFORE UPDATE ON trainer_specialization FOR EACH ROW
-BEGIN
- IF (NEW.trainer_id<>OLD.trainer_id OR NEW.specialization_id<>OLD.specialization_id)
- AND EXISTS (SELECT 1 FROM class_session cs JOIN fitness_class fc ON fc.class_id=cs.class_id
-  WHERE cs.trainer_id=OLD.trainer_id AND fc.specialization_id=OLD.specialization_id) THEN
-  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BR18: certification required by assigned session';
- END IF;
-END//
+
 DELIMITER ;
+

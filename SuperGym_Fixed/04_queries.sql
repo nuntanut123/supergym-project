@@ -1,4 +1,4 @@
-USE supergym;
+
 
 -- 1. ดูรายชื่อสมาชิกทั้งหมดพร้อมข้อมูลแพ็กเกจและวันหมดอายุสมาชิก
 SELECT m.member_id, m.first_name, m.last_name, mp.plan_name, ms.start_date, ms.end_date
