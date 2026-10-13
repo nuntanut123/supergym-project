@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SUPER GYM - Sign Up</title><link rel="icon" href="img/icon.png"><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/style.css"></head>
+<body><main class="pick login-page"><img src="img/logo.png" alt="Super Gym Fitness Club"><h1>Create an Account</h1><p class="sub">Become a SuperGym member</p>
+<form id="signupForm" class="login-form">
+<label for="firstName">First Name</label><input id="firstName" name="firstName" required maxlength="50" autocomplete="given-name">
+<label for="lastName">Last Name</label><input id="lastName" name="lastName" required maxlength="50" autocomplete="family-name">
+<label for="email">Email</label><input id="email" name="email" type="email" required maxlength="100" autocomplete="email">
+<label for="phone">Phone (optional)</label><input id="phone" name="phone" inputmode="tel" maxlength="20" autocomplete="tel">
+<label for="password">Password (8–72 characters)</label><input id="password" name="password" type="password" required minlength="8" maxlength="72" autocomplete="new-password">
+<label for="confirmPassword">Confirm Password</label><input id="confirmPassword" name="confirmPassword" type="password" required autocomplete="new-password">
+<button class="full" type="submit">Sign Up</button><p id="signupMessage" role="alert" hidden></p><p class="auth-switch">Already a member? <a href="index.html">Log In</a></p>
+</form></main><script src="js/signup.js"></script></body></html>

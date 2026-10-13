@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SUPER GYM - Members</title>
+<link rel="icon" href="img/icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="members">
+<header id="top"></header>
+<main>
+<h1>Members</h1><p class="sub"><span id="count">0</span> registered members</p>
+<section class="card"><h2>Add member</h2>
+<form id="form" novalidate>
+<label>First name<input name="firstName" autocomplete="off"><span class="err"></span></label>
+<label>Last name<input name="lastName" autocomplete="off"><span class="err"></span></label>
+<label>Email<input name="email" type="email"><span class="err"></span></label>
+<label>Phone<input name="phone" inputmode="tel" placeholder="0812345678"><span class="err"></span></label>
+<label>Plan<select name="plan"><option value="">Select a plan</option><option>Monthly</option><option>Quarterly</option><option>Yearly</option></select><span class="err"></span></label>
+<button class="full">Add member</button>
+</form></section>
+<section class="card"><input id="q" type="search" placeholder="Search members by name or email" style="width:100%;margin-bottom:.75rem"><div class="tw"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Plan</th><th>Ends</th><th>Status</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></section>
+</main>
+<div id="toast"></div>
+<script src="js/app.js"></script>
+</body>
+</html>
